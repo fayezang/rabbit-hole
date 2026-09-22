@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Rabbit Hole — 一个持续生长的视觉实验合集。">
+  <title>Rabbit Hole — Visual Experiments</title>
+  <style>
+    :root {
+      --ink: #17141f;
+      --paper: #eee9df;
+      --muted: #817a88;
+      --spring: #73b6a1;
+      --violet: #9e85b8;
+      --line: rgba(23, 20, 31, .16);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { background: var(--paper); }
+
+    body {
+      margin: 0;
+      min-height: 100svh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 77% 24%, rgba(158, 133, 184, .16), transparent 27rem),
+        var(--paper);
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    }
+
+    a { color: inherit; }
+
+    .shell {
+      width: min(1180px, calc(100% - 40px));
+      min-height: 100svh;
+      margin: 0 auto;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    header,
+    footer {
+      min-height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      font-size: 11px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    header span:last-child { color: var(--muted); }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, .78fr);
+      align-items: center;
+      gap: clamp(36px, 8vw, 120px);
+      padding: 72px 0;
+    }
+
+    .intro { align-self: end; }
+
+    .eyebrow {
+      margin: 0 0 24px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(72px, 12vw, 172px);
+      font-weight: 400;
+      letter-spacing: -.075em;
+      line-height: .72;
+    }
+
+    h1 em {
+      display: block;
+      margin-left: .36em;
+      color: var(--violet);
+      font-weight: 400;
+    }
+
+    .intro p:last-child {
+      width: min(420px, 100%);
+      margin: 54px 0 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      font-size: 15px;
+      line-height: 1.85;
+    }
+
+    .portal {
+      position: relative;
+      aspect-ratio: 4 / 5;
+      display: grid;
+      place-items: center;
+    }
+
+    .rings {
+      position: absolute;
+      inset: 4%;
+      border: 1px solid var(--line);
+      border-radius: 51% 49% 47% 53% / 45% 56% 44% 55%;
+      animation: drift 12s ease-in-out infinite alternate;
+    }
+
+    .rings::before,
+    .rings::after {
+      content: "";
+      position: absolute;
+      border: 1px solid var(--line);
+      border-radius: inherit;
+    }
+
+    .rings::before { inset: 10%; transform: rotate(9deg); }
+    .rings::after { inset: 22%; transform: rotate(-13deg); }
+
+    .work {
+      position: relative;
+      z-index: 1;
+      width: 58%;
+      aspect-ratio: 3 / 4;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 24px;
+      overflow: hidden;
+      border-radius: 48% 48% 10px 10px;
+      background:
+        radial-gradient(circle at 34% 38%, rgba(255,255,255,.32) 0 2px, transparent 3px),
+        radial-gradient(circle at 68% 52%, rgba(255,255,255,.22) 0 1px, transparent 2px),
+        linear-gradient(155deg, #b9d7ca, #3e7c73 58%, #183d3a);
+      color: #f1f5ef;
+      text-decoration: none;
+      box-shadow: 0 30px 80px rgba(42, 57, 58, .22);
+      transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s;
+    }
+
+    .work::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-radial-gradient(ellipse at 50% 45%, transparent 0 21px, rgba(255,255,255,.08) 22px 23px);
+      transform: scale(1.35);
+      transition: transform .8s ease;
+    }
+
+    .work:hover,
+    .work:focus-visible {
+      transform: translateY(-10px) rotate(-1deg);
+      box-shadow: 0 40px 100px rgba(42, 57, 58, .32);
+      outline: none;
+    }
+
+    .work:hover::before,
+    .work:focus-visible::before { transform: scale(1); }
+
+    .work small,
+    .work strong { position: relative; }
+    .work small { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+    .work strong {
+      margin-top: 8px;
+      font-family: "Songti SC", "STSong", Georgia, serif;
+      font-size: clamp(38px, 5vw, 64px);
+      font-weight: 400;
+      letter-spacing: .08em;
+    }
+
+    footer {
+      border-top: 1px solid var(--line);
+      border-bottom: 0;
+      color: var(--muted);
+    }
+
+    @keyframes drift {
+      to { transform: rotate(5deg) scale(.97); }
+    }
+
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 28px, 560px); }
+      header { min-height: 62px; }
+      header span:last-child { display: none; }
+      main { grid-template-columns: 1fr; padding: 54px 0 64px; }
+      .intro { align-self: auto; }
+      h1 { font-size: clamp(72px, 24vw, 120px); }
+      .intro p:last-child { margin-top: 40px; }
+      .portal { min-height: 500px; }
+      .work { width: min(70%, 300px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <span>Rabbit Hole / 视觉实验室</span>
+      <span>Visual experiments in code</span>
+    </header>
+
+    <main>
+      <section class="intro">
+        <p class="eyebrow">An evolving collection</p>
+        <h1>Rabbit <em>Hole</em></h1>
+        <p>由代码生成的界面、交互、动态系统，以及那些值得保留下来的美丽意外。沿着入口继续向下。</p>
+      </section>
+
+      <section class="portal" aria-label="视觉实验">
+        <div class="rings" aria-hidden="true"></div>
+        <a class="work" href="./spring-pond/">
+          <small>First descent · Interactive canvas</small>
+          <strong>春池</strong>
+        </a>
+      </section>
+    </main>
+
+    <footer>
+      <span>Rabbit Hole</span>
+      <span>001 experiment</span>
+    </footer>
+  </div>
+</body>
+</html>
