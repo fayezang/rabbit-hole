@@ -2,6 +2,8 @@
 
 一个持续生长的视觉实验合集，收录由代码生成的界面、交互、动态系统，以及那些值得保留下来的美丽意外。
 
+**Live demo**: <https://fayezang.github.io/rabbit-hole/>
+
 ## Experiments
 
 - [春池 · Spring Pond](./spring-pond/) — 上传图片，在可交互的水面中观察雨滴、波纹与折射。
