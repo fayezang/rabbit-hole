@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Neo Pointillism · 新点彩生成器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0f0f10;
+    color: #e8e8ea;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ===== 侧边控制面板 ===== */
+  .panel {
+    width: 320px;
+    flex-shrink: 0;
+    background: #18181b;
+    border-right: 1px solid #2a2a2e;
+    padding: 24px 20px;
+    overflow-y: auto;
+  }
+  .panel h1 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .panel .sub {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 24px;
+  }
+
+  .group {
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #26262a;
+  }
+  .group:last-of-type { border-bottom: none; }
+  .group-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #777;
+    margin-bottom: 12px;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .row label {
+    font-size: 13px;
+    color: #ccc;
+  }
+  .row .value {
+    font-size: 12px;
+    color: #888;
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #2a2a2e;
+    border-radius: 4px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  /* 形状选择 */
+  .shape-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .shape-btn {
+    aspect-ratio: 1;
+    background: #222226;
+    border: 1px solid #2e2e32;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .shape-btn:hover { border-color: #4a4a52; }
+  .shape-btn.active {
+    background: #fff;
+    border-color: #fff;
+  }
+  .shape-btn svg { width: 18px; height: 18px; }
+  .shape-btn .ico-fill { fill: #ccc; }
+  .shape-btn.active .ico-fill { fill: #000; }
+
+  /* 颜色模式 */
+  .seg {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: #222226;
+    border-radius: 6px;
+    padding: 3px;
+  }
+  .seg button {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    padding: 7px 0;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .seg button.active {
+    background: #fff;
+    color: #000;
+    font-weight: 500;
+  }
+
+  /* 颜色控制 */
+  .color-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .color-row input[type="color"] {
+    width: 36px; height: 32px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+  }
+  .color-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  .color-row input[type="color"]::-webkit-color-swatch { border: 1px solid #333; border-radius: 6px; }
+
+  .palette {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .palette .swatch {
+    width: 24px; height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.1s;
+  }
+  .palette .swatch:hover { transform: scale(1.15); }
+  .palette .swatch.active { border-color: #fff; }
+
+  /* 按钮 */
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 11px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 8px;
+  }
+  .btn-primary {
+    background: #fff;
+    color: #000;
+  }
+  .btn-primary:hover { background: #e8e8ea; }
+  .btn-secondary {
+    background: #222226;
+    color: #ccc;
+    border: 1px solid #2e2e32;
+  }
+  .btn-secondary:hover { background: #2a2a2e; }
+
+  /* ===== 主画布区 ===== */
+  .stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    background:
+      radial-gradient(circle at 20% 20%, #1a1a1e 0%, #0f0f10 50%);
+  }
+  .canvas-wrap {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    max-width: 100%;
+    max-height: 80vh;
+  }
+  canvas {
+    display: block;
+    max-width: 100%;
+    max-height: 80vh;
+    width: auto;
+    height: auto;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: #555;
+  }
+  .empty-state .big {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+  .empty-state .hint {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+  .upload-btn {
+    display: inline-block;
+    padding: 12px 28px;
+    background: #fff;
+    color: #000;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: transform 0.1s;
+  }
+  .upload-btn:hover { transform: translateY(-2px); }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 900px;
+  }
+  .top-bar .title {
+    font-size: 14px;
+    color: #aaa;
+    flex: 1;
+  }
+  .icon-btn {
+    background: #222226;
+    border: 1px solid #2e2e32;
+    color: #ccc;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  .icon-btn:hover { background: #2a2a2e; }
+
+  /* 隐藏文件输入 */
+  #fileInput { display: none; }
+
+  /* 加载提示 */
+  .loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 14px;
+    backdrop-filter: blur(4px);
+  }
+  .loading.show { display: flex; }
+
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    .panel { width: 100%; border-right: none; border-bottom: 1px solid #2a2a2e; max-height: 50vh; }
+  }
+</style>
+</head>
+<body>
+  <!-- ===== 控制面板 ===== -->
+  <aside class="panel">
+    <h1>Neo Pointillism</h1>
+    <p class="sub">新点彩派图形生成器</p>
+
+    <!-- 上传 -->
+    <div class="group">
+      <div class="group-title">图像</div>
+      <button class="btn btn-secondary" id="uploadBtn">上传图片</button>
+      <input type="file" id="fileInput" accept="image/*" />
+    </div>
+
+    <!-- 点尺寸 -->
+    <div class="group">
+      <div class="group-title">点的尺寸</div>
+      <div class="row">
+        <label>大小</label>
+        <span class="value" id="sizeVal">8 px</span>
+      </div>
+      <input type="range" id="dotSize" min="2" max="40" value="8" />
+
+      <div class="row" style="margin-top:12px;">
+        <label>密度（间距）</label>
+        <span class="value" id="spacingVal">10 px</span>
+      </div>
+      <input type="range" id="spacing" min="2" max="40" value="10" />
+
+      <div class="row" style="margin-top:12px;">
+        <label>大小随机度</label>
+        <span class="value" id="jitterVal">30%</span>
+      </div>
+      <input type="range" id="jitter" min="0" max="100" value="30" />
+    </div>
+
+    <!-- 形状 -->
+    <div class="group">
+      <div class="group-title">点的形状</div>
+      <div class="shape-grid" id="shapeGrid">
+        <button class="shape-btn active" data-shape="circle" title="圆形">
+          <svg viewBox="0 0 24 24"><circle class="ico-fill" cx="12" cy="12" r="8"/></svg>
+        </button>
+        <button class="shape-btn" data-shape="square" title="方形">
+          <svg viewBox="0 0 24 24"><rect class="ico-fill" x="4" y="4" width="16" height="16"/></svg>
+        </button>
+        <button class="shape-btn" data-shape="triangle" title="三角形">
+          <svg viewBox="0 0 24 24"><polygon class="ico-fill" points="12,4 22,20 2,20"/></svg>
+        </button>
+        <button class="shape-btn" data-shape="diamond" title="菱形">
+          <svg viewBox="0 0 24 24"><polygon class="ico-fill" points="12,2 22,12 12,22 2,12"/></svg>
+        </button>
+        <button class="shape-btn" data-shape="cross" title="十字">
+          <svg viewBox="0 0 24 24"><path class="ico-fill" d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z"/></svg>
+        </button>
+        <button class="shape-btn" data-shape="hexagon" title="六边形">
+          <svg viewBox="0 0 24 24"><polygon class="ico-fill" points="12,2 21,7 21,17 12,22 3,17 3,7"/></svg>
+        </button>
+        <button class="shape-btn" data-shape="star" title="星形">
+          <svg viewBox="0 0 24 24"><polygon class="ico-fill" points="12,2 14.5,9 22,9 16,13.5 18.5,21 12,16.5 5.5,21 8,13.5 2,9 9.5,9"/></svg>
+        </button>
+        <button class="shape-btn" data-shape="ring" title="环形">
+          <svg viewBox="0 0 24 24"><path class="ico-fill" fill-rule="evenodd" d="M12 4a8 8 0 100 16 8 8 0 000-16zm0 4a4 4 0 110 8 4 4 0 010-8z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 颜色 -->
+    <div class="group">
+      <div class="group-title">颜色模式</div>
+      <div class="seg" id="colorMode">
+        <button class="active" data-mode="image">原图采样</button>
+        <button data-mode="single">单色</button>
+        <button data-mode="palette">调色板</button>
+      </div>
+
+      <!-- 单色 -->
+      <div id="singleColorPanel" style="display:none; margin-top:14px;">
+        <div class="row">
+          <label>点颜色</label>
+          <span class="value" id="singleHex">#FF3B6E</span>
+        </div>
+        <div class="color-row">
+          <input type="color" id="singleColor" value="#FF3B6E" />
+          <input type="range" id="singleAlpha" min="20" max="100" value="100" style="flex:1;" />
+        </div>
+      </div>
+
+      <!-- 调色板 -->
+      <div id="palettePanel" style="display:none; margin-top:14px;">
+        <div class="row"><label>预设调色板</label></div>
+        <div class="palette" id="paletteList"></div>
+      </div>
+
+      <div class="row" style="margin-top:14px;">
+        <label>背景颜色</label>
+        <input type="color" id="bgColor" value="#FFFFFF" style="width:36px;height:32px;border:none;border-radius:6px;cursor:pointer;" />
+      </div>
+    </div>
+
+    <!-- 操作 -->
+    <div class="group">
+      <div class="group-title">操作</div>
+      <button class="btn btn-primary" id="renderBtn">生成图形</button>
+      <button class="btn btn-secondary" id="downloadBtn">下载 PNG</button>
+    </div>
+  </aside>
+
+  <!-- ===== 主画布 ===== -->
+  <main class="stage">
+    <div class="top-bar" id="topBar" style="display:none;">
+      <span class="title" id="fileName">未命名</span>
+      <button class="icon-btn" id="reuploadBtn">重新上传</button>
+    </div>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <div class="empty-state" id="emptyState">
+        <div class="big">·:·</div>
+        <div class="hint">上传一张图片，开始你的点彩创作</div>
+        <label class="upload-btn" for="fileInput">选择图片</label>
+      </div>
+      <canvas id="canvas" style="display:none;"></canvas>
+      <div class="loading" id="loading">渲染中…</div>
+    </div>
+  </main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  // ===== 元素 =====
+  const fileInput = $('fileInput');
+  const uploadBtn = $('uploadBtn');
+  const reuploadBtn = $('reuploadBtn');
+  const canvas = $('canvas');
+  const ctx = canvas.getContext('2d');
+  const emptyState = $('emptyState');
+  const topBar = $('topBar');
+  const fileName = $('fileName');
+  const loading = $('loading');
+
+  // 控制
+  const dotSize = $('dotSize');
+  const spacing = $('spacing');
+  const jitter = $('jitter');
+  const sizeVal = $('sizeVal');
+  const spacingVal = $('spacingVal');
+  const jitterVal = $('jitterVal');
+  const shapeGrid = $('shapeGrid');
+  const colorModeSeg = $('colorMode');
+  const singleColorPanel = $('singleColorPanel');
+  const palettePanel = $('palettePanel');
+  const singleColor = $('singleColor');
+  const singleHex = $('singleHex');
+  const singleAlpha = $('singleAlpha');
+  const bgColor = $('bgColor');
+  const renderBtn = $('renderBtn');
+  const downloadBtn = $('downloadBtn');
+  const paletteList = $('paletteList');
+
+  // ===== 状态 =====
+  const state = {
+    img: null,
+    shape: 'circle',
+    colorMode: 'image',  // image | single | palette
+    activePalette: 0,
+  };
+
+  // 预设调色板
+  const palettes = [
+    { name: 'Vintage',   colors: ['#E63946','#F1FAEE','#A8DADC','#457B9D','#1D3557'] },
+    { name: 'Sunset',    colors: ['#FF6B6B','#FFE66D','#FF9F43','#EE5A6F','#C44569'] },
+    { name: 'Ocean',     colors: ['#0077B6','#00B4D8','#90E0EF','#CAF0F8','#03045E'] },
+    { name: 'Mono',      colors: ['#000000','#333333','#666666','#999999','#CCCCCC'] },
+    { name: 'Pop',       colors: ['#FF006E','#FB5607','#FFBE0B','#8338EC','#3A86FF'] },
+    { name: 'Pastel',    colors: ['#FFD6E0','#FFEFCF','#D4F0F0','#CCE2CB','#E5D4FF'] },
+  ];
+
+  // 渲染调色板
+  function renderPaletteList() {
+    paletteList.innerHTML = '';
+    palettes.forEach((p, idx) => {
+      const block = document.createElement('div');
+      block.style.display = 'flex';
+      block.style.alignItems = 'center';
+      block.style.gap = '8px';
+      block.style.width = '100%';
+      block.style.marginBottom = '6px';
+      block.style.cursor = 'pointer';
+      block.title = p.name;
+
+      const swatchGroup = document.createElement('div');
+      swatchGroup.style.display = 'flex';
+      swatchGroup.style.flex = '1';
+      swatchGroup.style.borderRadius = '4px';
+      swatchGroup.style.overflow = 'hidden';
+      swatchGroup.style.border = idx === state.activePalette ? '2px solid #fff' : '2px solid transparent';
+      swatchGroup.style.height = '24px';
+      p.colors.forEach(c => {
+        const sw = document.createElement('div');
+        sw.style.flex = '1';
+        sw.style.background = c;
+        swatchGroup.appendChild(sw);
+      });
+
+      const label = document.createElement('span');
+      label.textContent = p.name;
+      label.style.fontSize = '11px';
+      label.style.color = '#888';
+      label.style.minWidth = '50px';
+
+      block.appendChild(swatchGroup);
+      block.appendChild(label);
+      block.onclick = () => {
+        state.activePalette = idx;
+        renderPaletteList();
+        scheduleRender();
+      };
+      paletteList.appendChild(block);
+    });
+  }
+  renderPaletteList();
+
+  // ===== 文件上传 =====
+  uploadBtn.onclick = () => fileInput.click();
+  reuploadBtn.onclick = () => fileInput.click();
+
+  fileInput.addEventListener('change', (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    fileName.textContent = f.name;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        state.img = img;
+        emptyState.style.display = 'none';
+        canvas.style.display = 'block';
+        topBar.style.display = 'flex';
+        render();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(f);
+  });
+
+  // ===== 控件事件 =====
+  const updateLabel = () => {
+    sizeVal.textContent = dotSize.value + ' px';
+    spacingVal.textContent = spacing.value + ' px';
+    jitterVal.textContent = jitter.value + '%';
+    singleHex.textContent = singleColor.value.toUpperCase();
+  };
+
+  let renderTimer = null;
+  function scheduleRender() {
+    updateLabel();
+    if (!state.img) return;
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(render, 80);
+  }
+
+  [dotSize, spacing, jitter].forEach(el => el.addEventListener('input', scheduleRender));
+  [singleColor, singleAlpha, bgColor].forEach(el => el.addEventListener('input', scheduleRender));
+
+  // 形状切换
+  shapeGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.shape-btn');
+    if (!btn) return;
+    shapeGrid.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.shape = btn.dataset.shape;
+    scheduleRender();
+  });
+
+  // 颜色模式切换
+  colorModeSeg.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    colorModeSeg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.colorMode = btn.dataset.mode;
+    singleColorPanel.style.display = state.colorMode === 'single' ? 'block' : 'none';
+    palettePanel.style.display = state.colorMode === 'palette' ? 'block' : 'none';
+    scheduleRender();
+  });
+
+  renderBtn.onclick = render;
+
+  // ===== 形状绘制 =====
+  function drawShape(ctx, shape, x, y, r) {
+    ctx.beginPath();
+    switch (shape) {
+      case 'circle':
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case 'square':
+        ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        break;
+      case 'triangle': {
+        const h = r * 1.732;
+        ctx.moveTo(x, y - r);
+        ctx.lineTo(x + h * 0.866, y + r * 0.5);
+        ctx.lineTo(x - h * 0.866, y + r * 0.5);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      }
+      case 'diamond':
+        ctx.moveTo(x, y - r);
+        ctx.lineTo(x + r, y);
+        ctx.lineTo(x, y + r);
+        ctx.lineTo(x - r, y);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case 'cross': {
+        const t = r * 0.4;
+        ctx.fillRect(x - t, y - r, t * 2, r * 2);
+        ctx.fillRect(x - r, y - t, r * 2, t * 2);
+        break;
+      }
+      case 'hexagon': {
+        for (let i = 0; i < 6; i++) {
+          const a = Math.PI / 3 * i - Math.PI / 2;
+          const px = x + r * Math.cos(a);
+          const py = y + r * Math.sin(a);
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        break;
+      }
+      case 'star': {
+        const outer = r, inner = r * 0.45;
+        for (let i = 0; i < 10; i++) {
+          const rad = (i % 2 === 0) ? outer : inner;
+          const a = Math.PI / 5 * i - Math.PI / 2;
+          const px = x + rad * Math.cos(a);
+          const py = y + rad * Math.sin(a);
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        break;
+      }
+      case 'ring':
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.arc(x, y, r * 0.5, 0, Math.PI * 2, true);
+        ctx.fill('evenodd');
+        break;
+    }
+  }
+
+  // ===== 颜色辅助 =====
+  function hexToRgb(hex) {
+    const m = hex.replace('#','').match(/.{2}/g);
+    return { r: parseInt(m[0],16), g: parseInt(m[1],16), b: parseInt(m[2],16) };
+  }
+
+  // 寻找最接近的调色板颜色
+  function nearestPaletteColor(r, g, b, paletteRgb) {
+    let best = paletteRgb[0], min = Infinity;
+    for (const c of paletteRgb) {
+      const d = (r - c.r) ** 2 + (g - c.g) ** 2 + (b - c.b) ** 2;
+      if (d < min) { min = d; best = c; }
+    }
+    return best;
+  }
+
+  // ===== 主渲染 =====
+  function render() {
+    if (!state.img) return;
+    loading.classList.add('show');
+
+    requestAnimationFrame(() => {
+      const img = state.img;
+      // 控制最大尺寸防止性能问题
+      const MAX = 1200;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        const s = Math.min(MAX / w, MAX / h);
+        w = Math.round(w * s);
+        h = Math.round(h * s);
+      }
+      canvas.width = w;
+      canvas.height = h;
+
+      // 用离屏 canvas 采样原图
+      const off = document.createElement('canvas');
+      off.width = w; off.height = h;
+      const offCtx = off.getContext('2d');
+      offCtx.drawImage(img, 0, 0, w, h);
+      const imgData = offCtx.getImageData(0, 0, w, h).data;
+
+      // 背景
+      ctx.fillStyle = bgColor.value;
+      ctx.fillRect(0, 0, w, h);
+
+      const baseSize = parseInt(dotSize.value, 10);
+      const step = parseInt(spacing.value, 10);
+      const jit = parseInt(jitter.value, 10) / 100;
+      const shape = state.shape;
+      const mode = state.colorMode;
+      const sCol = singleColor.value;
+      const sAlpha = parseInt(singleAlpha.value, 10) / 100;
+      const paletteRgb = palettes[state.activePalette].colors.map(hexToRgb);
+
+      ctx.globalAlpha = 1;
+
+      for (let y = step / 2; y < h; y += step) {
+        for (let x = step / 2; x < w; x += step) {
+          // 抖动位置（让点彩感更自然）
+          const ox = (Math.random() - 0.5) * step * 0.4;
+          const oy = (Math.random() - 0.5) * step * 0.4;
+          const px = x + ox, py = y + oy;
+
+          // 采样颜色
+          const ix = Math.min(w - 1, Math.max(0, Math.floor(px)));
+          const iy = Math.min(h - 1, Math.max(0, Math.floor(py)));
+          const idx = (iy * w + ix) * 4;
+          const r = imgData[idx], g = imgData[idx + 1], b = imgData[idx + 2];
+
+          // 根据亮度决定大小（更暗 = 更大点，模拟点彩疏密）
+          const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+          const sizeFactor = 1 - lum * 0.4; // 暗处略大
+          const randomFactor = 1 + (Math.random() - 0.5) * jit;
+          const radius = (baseSize / 2) * sizeFactor * randomFactor;
+
+          // 决定颜色
+          let fill;
+          if (mode === 'image') {
+            fill = `rgb(${r},${g},${b})`;
+          } else if (mode === 'single') {
+            ctx.globalAlpha = sAlpha;
+            fill = sCol;
+          } else { // palette
+            const c = nearestPaletteColor(r, g, b, paletteRgb);
+            fill = `rgb(${c.r},${c.g},${c.b})`;
+          }
+          ctx.fillStyle = fill;
+
+          drawShape(ctx, shape, px, py, Math.max(0.5, radius));
+        }
+      }
+
+      ctx.globalAlpha = 1;
+      loading.classList.remove('show');
+    });
+  }
+
+  // ===== 下载 =====
+  downloadBtn.onclick = () => {
+    if (!state.img) {
+      alert('请先上传一张图片');
+      return;
+    }
+    const link = document.createElement('a');
+    link.download = 'neo-pointillism-' + Date.now() + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
+  updateLabel();
+})();
+</script>
+</body>
+</html>

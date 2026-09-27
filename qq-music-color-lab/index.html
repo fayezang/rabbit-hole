@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>专辑封面动态取色实验室 V3</title>
+  <style>
+    :root {
+      --page-bg: #f5f6f8;
+      --surface: rgba(255, 255, 255, 0.84);
+      --surface-solid: #ffffff;
+      --text: #17191c;
+      --text-2: #626870;
+      --text-3: #959ba3;
+      --line: rgba(21, 26, 32, 0.1);
+      --accent: #31b7d4;
+      --bg-a: #c3c4f2;
+      --bg-b: #f6d8d5;
+      --bg-bridge: #d9c5ea;
+      --blur: 88px;
+      --strength: 1;
+      --radius: 24px;
+      font-family: Inter, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: var(--page-bg);
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--page-bg); }
+    button, input { font: inherit; }
+    button { color: inherit; }
+
+    .app {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: 28px 32px 40px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      color: var(--text-2);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      transition: background 300ms ease;
+    }
+
+    h1 { margin: 0; font-size: clamp(24px, 3vw, 38px); line-height: 1.15; letter-spacing: -0.03em; }
+    .subtitle { margin: 10px 0 0; max-width: 690px; color: var(--text-2); font-size: 14px; line-height: 1.7; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.72fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-solid);
+      overflow: hidden;
+    }
+
+    .preview {
+      position: relative;
+      min-height: 700px;
+      isolation: isolate;
+      background: #f7f8f8;
+      overflow: hidden;
+    }
+
+    .ambient,
+    .ambient::before,
+    .ambient::after {
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .ambient {
+      inset: -10%;
+      z-index: -2;
+      background: var(--bg-bridge);
+      transition: background 420ms ease;
+    }
+
+    .ambient::before,
+    .ambient::after {
+      content: "";
+      inset: -6%;
+      opacity: var(--strength);
+      filter: blur(var(--blur));
+      transform: translateZ(0) scale(1.08);
+      transition: background 420ms ease, filter 220ms ease, opacity 220ms ease;
+    }
+
+    .ambient::before {
+      background: radial-gradient(ellipse 88% 86% at 4% 96%, var(--bg-a) 0%, var(--bg-a) 20%, color-mix(in srgb, var(--bg-a) 66%, transparent) 49%, transparent 78%);
+    }
+
+    .ambient::after {
+      background: radial-gradient(ellipse 150% 62% at 80% -4%, var(--bg-b) 0%, var(--bg-b) 27%, color-mix(in srgb, var(--bg-b) 68%, transparent) 62%, transparent 90%);
+    }
+
+    .preview-noise {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.045;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.3'/%3E%3C/svg%3E");
+      mix-blend-mode: soft-light;
+    }
+
+    .mock-window {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 700px;
+      padding: 20px 28px 24px;
+    }
+
+    .window-bar { display: flex; align-items: center; justify-content: space-between; }
+    .traffic { display: flex; gap: 7px; }
+    .traffic i { display: block; width: 10px; height: 10px; border-radius: 50%; }
+    .traffic i:nth-child(1) { background: #ff6259; }
+    .traffic i:nth-child(2) { background: #ffbf3b; }
+    .traffic i:nth-child(3) { background: #32c84b; }
+    .window-label { color: rgba(23, 25, 28, 0.42); font-size: 12px; }
+
+    .player-main {
+      display: grid;
+      grid-template-columns: minmax(230px, 0.9fr) minmax(320px, 1.1fr);
+      gap: clamp(34px, 6vw, 88px);
+      align-items: center;
+      padding: 44px clamp(20px, 5vw, 72px) 20px;
+    }
+
+    .cover-shell {
+      width: min(100%, 330px);
+      aspect-ratio: 1;
+      border-radius: 30px;
+      padding: 28px;
+      background: rgba(255,255,255,0.86);
+      border: 1px solid rgba(255,255,255,0.7);
+      box-shadow: 0 26px 70px rgba(57, 66, 72, 0.12);
+      justify-self: end;
+    }
+
+    .cover-wrap { position: relative; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: rgba(10,14,18,0.82); }
+    .cover-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: repeating-radial-gradient(circle, transparent 0 8px, rgba(255,255,255,0.05) 9px, transparent 10px 15px);
+      pointer-events: none;
+    }
+
+    #coverImage { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .cover-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,0.72); text-align: center; line-height: 1.7; font-size: 13px; }
+    .cover-placeholder svg { display: block; margin: 0 auto 12px; }
+
+    .lyrics { align-self: center; max-width: 470px; }
+    .track-title { margin: 0; font-size: clamp(22px, 2.3vw, 32px); line-height: 1.2; letter-spacing: -0.02em; }
+    .artist { margin: 8px 0 34px; color: rgba(23,25,28,0.54); font-size: 15px; }
+    .lyric-line { margin: 0 0 13px; font-size: clamp(16px, 1.6vw, 20px); line-height: 1.4; color: rgba(23,25,28,0.72); }
+    .lyric-line.active { color: var(--accent); font-weight: 650; transition: color 320ms ease; }
+    .lyric-line.faded { color: rgba(23,25,28,0.22); }
+
+    .controls { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 20px; }
+    .track-meta { min-width: 0; color: rgba(23,25,28,0.7); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .transport { display: flex; align-items: center; gap: 22px; }
+    .icon-btn { border: 0; background: transparent; padding: 6px; display: grid; place-items: center; opacity: 0.78; }
+    .play-btn { width: 42px; height: 42px; border: 0; border-radius: 50%; color: #fff; background: var(--accent); display: grid; place-items: center; transition: background 320ms ease, transform 160ms ease; }
+    .play-btn:hover { transform: scale(1.04); }
+    .progress-wrap { justify-self: end; width: min(180px, 100%); }
+    .progress { height: 3px; background: rgba(23,25,28,0.12); border-radius: 99px; overflow: hidden; }
+    .progress > i { display: block; width: 58%; height: 100%; background: var(--accent); transition: background 320ms ease; }
+    .time { display: flex; justify-content: space-between; margin-top: 6px; color: rgba(23,25,28,0.42); font-size: 10px; }
+
+    .panel { padding: 20px; }
+    .panel-section + .panel-section { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--line); }
+    .section-title { margin: 0 0 12px; font-size: 14px; }
+
+    .dropzone {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 178px;
+      padding: 24px;
+      border: 1px dashed rgba(20,25,30,0.23);
+      border-radius: 18px;
+      background: #fafbfc;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 180ms ease, background 180ms ease;
+    }
+    .dropzone:hover, .dropzone.dragover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, white); }
+    .dropzone input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+    .upload-icon { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; margin: 0 auto 12px; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, white); transition: color 320ms ease, background 320ms ease; }
+    .drop-title { font-size: 14px; font-weight: 650; }
+    .drop-hint { margin-top: 6px; color: var(--text-3); font-size: 12px; line-height: 1.5; }
+
+    .status { display: flex; align-items: center; gap: 8px; min-height: 20px; margin-top: 10px; color: var(--text-2); font-size: 12px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #b4bac0; }
+    .status.ready .status-dot { background: #2ab85a; }
+    .status.working .status-dot { background: #e9a21b; animation: pulse 1s infinite alternate; }
+    .status.error .status-dot { background: #e85454; }
+    @keyframes pulse { to { opacity: 0.35; } }
+
+    .swatches { display: grid; gap: 10px; }
+    .swatch {
+      display: grid;
+      grid-template-columns: 46px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+    .swatch-color { width: 46px; height: 46px; border-radius: 11px; border: 1px solid rgba(20,25,30,0.08); }
+    .swatch-label { color: var(--text-2); font-size: 11px; margin-bottom: 4px; }
+    .swatch-value { font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; }
+    .copy-btn { border: 0; border-radius: 9px; padding: 7px 9px; background: #f1f3f5; color: var(--text-2); font-size: 11px; cursor: pointer; }
+    .copy-btn:hover { color: var(--text); background: #e9ecef; }
+
+    .palette { display: flex; gap: 7px; min-height: 34px; }
+    .palette-chip { position: relative; flex: 1; min-width: 20px; height: 34px; border-radius: 9px; border: 1px solid rgba(20,25,30,0.07); cursor: help; }
+    .palette-chip::after { content: attr(data-label); position: absolute; left: 50%; bottom: calc(100% + 7px); transform: translateX(-50%); padding: 5px 7px; border-radius: 7px; color: #fff; background: #202328; font-size: 10px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 140ms ease; }
+    .palette-chip:hover::after { opacity: 1; }
+
+    .slider-row { display: grid; grid-template-columns: 52px 1fr 38px; gap: 10px; align-items: center; margin-top: 12px; color: var(--text-2); font-size: 12px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .slider-value { text-align: right; font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; }
+
+    .method { margin: 0; padding-left: 18px; color: var(--text-2); font-size: 12px; line-height: 1.75; }
+    .method strong { color: var(--text); font-weight: 650; }
+
+    .toast { position: fixed; left: 50%; bottom: 24px; z-index: 20; transform: translate(-50%, 16px); padding: 9px 13px; border-radius: 10px; color: #fff; background: rgba(20,23,27,0.9); font-size: 12px; opacity: 0; pointer-events: none; transition: opacity 180ms ease, transform 180ms ease; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (max-width: 1080px) {
+      .layout { grid-template-columns: 1fr; }
+      .preview, .mock-window { min-height: 650px; }
+      .panel { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+      .panel-section + .panel-section { margin: 0; padding: 0; border: 0; }
+    }
+
+    @media (max-width: 720px) {
+      .app { padding: 20px 14px 30px; }
+      .topbar { display: block; }
+      .preview, .mock-window { min-height: 760px; }
+      .mock-window { padding: 16px; }
+      .player-main { grid-template-columns: 1fr; gap: 28px; padding: 36px 10px 26px; }
+      .cover-shell { width: min(76vw, 270px); justify-self: center; }
+      .lyrics { width: 100%; max-width: 420px; justify-self: center; }
+      .artist { margin-bottom: 22px; }
+      .controls { grid-template-columns: 1fr auto; }
+      .progress-wrap { grid-column: 1 / -1; justify-self: stretch; width: 100%; }
+      .panel { display: block; }
+      .panel-section + .panel-section { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--line); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">Dynamic color lab · V3</div>
+        <h1>专辑封面动态取色实验室 V3</h1>
+        <p class="subtitle">完全基于 OKLCH 的通用规则选择主色和第二色，不包含橙色、粉蓝、蓝黄等特定色相组合的特殊处理。</p>
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="card preview" aria-label="QQ 音乐风格背景预览">
+        <div class="ambient" aria-hidden="true"></div>
+        <div class="preview-noise" aria-hidden="true"></div>
+        <div class="mock-window">
+          <div class="window-bar">
+            <div class="traffic"><i></i><i></i><i></i></div>
+            <div class="window-label">动态主题预览 · V3</div>
+          </div>
+
+          <div class="player-main">
+            <div class="cover-shell">
+              <div class="cover-wrap">
+                <img id="coverImage" alt="上传的专辑封面">
+                <div class="cover-placeholder" id="coverPlaceholder">
+                  <div>
+                    <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
+                      <circle cx="21" cy="21" r="19" stroke="currentColor" stroke-width="1.5" opacity=".55"/>
+                      <circle cx="21" cy="21" r="6" stroke="currentColor" stroke-width="1.5"/>
+                      <circle cx="21" cy="21" r="1.8" fill="currentColor"/>
+                    </svg>
+                    上传专辑封面<br>查看动态主题
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="lyrics">
+              <h2 class="track-title">Theme of the moment</h2>
+              <p class="artist">Album color preview</p>
+              <p class="lyric-line faded">等待一张图片唤醒颜色</p>
+              <p class="lyric-line">封面里的情绪慢慢展开</p>
+              <p class="lyric-line active">这一句使用提取后的强调色</p>
+              <p class="lyric-line">主色在左下方轻轻漫开</p>
+              <p class="lyric-line">第二色从右上方融入背景</p>
+              <p class="lyric-line faded">所有颜色都来自同一张封面</p>
+            </div>
+          </div>
+
+          <div class="controls">
+            <div class="track-meta">专辑封面动态主题 · 本地计算</div>
+            <div class="transport">
+              <button class="icon-btn" aria-label="上一首">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M4.5 4h1.4v10H4.5zM13.7 4.4v9.2L6.8 9z"/></svg>
+              </button>
+              <button class="play-btn" aria-label="播放">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M6.4 4.5 13.2 9l-6.8 4.5z"/></svg>
+              </button>
+              <button class="icon-btn" aria-label="下一首">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M12.1 4h1.4v10h-1.4zM4.3 4.4v9.2L11.2 9z"/></svg>
+              </button>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress"><i></i></div>
+              <div class="time"><span>02:43</span><span>03:24</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card panel">
+        <section class="panel-section">
+          <h2 class="section-title">上传封面</h2>
+          <label class="dropzone" id="dropzone">
+            <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+            <div>
+              <div class="upload-icon">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 15V4m0 0L7 8m4-4 4 4"/><path d="M4 13v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>
+              </div>
+              <div class="drop-title">点击或拖入图片</div>
+              <div class="drop-hint">支持 JPG、PNG、WebP、GIF<br>图片只在浏览器本地处理</div>
+            </div>
+          </label>
+          <div class="status" id="status"><i class="status-dot"></i><span>等待上传图片</span></div>
+        </section>
+
+        <section class="panel-section">
+          <h2 class="section-title">主题色值</h2>
+          <div class="swatches">
+            <div class="swatch">
+              <div class="swatch-color" id="accentSwatch" style="background:#31B7D4"></div>
+              <div><div class="swatch-label">强调色</div><div class="swatch-value" id="accentValue">#31B7D4</div></div>
+              <button class="copy-btn" data-copy="accentValue">复制</button>
+            </div>
+            <div class="swatch">
+              <div class="swatch-color" id="primarySwatch" style="background:#C6EDF4"></div>
+              <div><div class="swatch-label">背景主色</div><div class="swatch-value" id="primaryValue">#C6EDF4</div></div>
+              <button class="copy-btn" data-copy="primaryValue">复制</button>
+            </div>
+            <div class="swatch">
+              <div class="swatch-color" id="secondarySwatch" style="background:#E5F5F8"></div>
+              <div><div class="swatch-label">背景第二色</div><div class="swatch-value" id="secondaryValue">#E5F5F8</div></div>
+              <button class="copy-btn" data-copy="secondaryValue">复制</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2 class="section-title">封面候选色</h2>
+          <div class="palette" id="palette" aria-label="封面颜色聚类结果"></div>
+          <div class="slider-row">
+            <label for="blurRange">模糊</label>
+            <input id="blurRange" type="range" min="30" max="140" value="88">
+            <span class="slider-value" id="blurValue">88</span>
+          </div>
+          <div class="slider-row">
+            <label for="strengthRange">浓度</label>
+            <input id="strengthRange" type="range" min="45" max="100" value="100">
+            <span class="slider-value" id="strengthValue">100%</span>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2 class="section-title">取色规则</h2>
+          <ol class="method">
+            <li><strong>OKLab 聚类</strong>：将封面压缩采样后聚类为 16 个候选颜色。</li>
+            <li><strong>OKLCH 主色</strong>：综合覆盖面积、色度与中间明度选择主题主色。</li>
+            <li><strong>通用第二色</strong>：根据面积、色度和与主色的感知距离选择辅助色。</li>
+            <li><strong>统一色值映射</strong>：强调色、背景双色和桥接色只使用通用 OKLCH 公式。</li>
+          </ol>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <canvas id="workCanvas" width="96" height="96" hidden></canvas>
+  <div class="toast" id="toast">已复制色值</div>
+
+  <script>
+    const $ = (selector) => document.querySelector(selector);
+    const root = document.documentElement;
+    const fileInput = $("#fileInput");
+    const dropzone = $("#dropzone");
+    const coverImage = $("#coverImage");
+    const coverPlaceholder = $("#coverPlaceholder");
+    const canvas = $("#workCanvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const statusEl = $("#status");
+    const paletteEl = $("#palette");
+    const toast = $("#toast");
+
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+    const srgbToLinear = (value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    const linearToSrgb = (value) => value <= 0.0031308 ? value * 12.92 : 1.055 * Math.pow(value, 1 / 2.4) - 0.055;
+
+    function rgbToOklab(rgb) {
+      const r = srgbToLinear(rgb[0] / 255);
+      const g = srgbToLinear(rgb[1] / 255);
+      const b = srgbToLinear(rgb[2] / 255);
+      const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+      const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+      const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+      const l3 = Math.cbrt(l), m3 = Math.cbrt(m), s3 = Math.cbrt(s);
+      return [
+        0.2104542553 * l3 + 0.793617785 * m3 - 0.0040720468 * s3,
+        1.9779984951 * l3 - 2.428592205 * m3 + 0.4505937099 * s3,
+        0.0259040371 * l3 + 0.7827717662 * m3 - 0.808675766 * s3
+      ];
+    }
+
+    function oklabToRgb(lab) {
+      const l3 = lab[0] + 0.3963377774 * lab[1] + 0.2158037573 * lab[2];
+      const m3 = lab[0] - 0.1055613458 * lab[1] - 0.0638541728 * lab[2];
+      const s3 = lab[0] - 0.0894841775 * lab[1] - 1.291485548 * lab[2];
+      const l = l3 ** 3, m = m3 ** 3, s = s3 ** 3;
+      const r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+      const g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+      const b = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s;
+      return [linearToSrgb(r) * 255, linearToSrgb(g) * 255, linearToSrgb(b) * 255];
+    }
+
+    function labToLch(lab) {
+      return [lab[0], Math.hypot(lab[1], lab[2]), Math.atan2(lab[2], lab[1])];
+    }
+
+    function lchToLab(lch) {
+      return [lch[0], lch[1] * Math.cos(lch[2]), lch[1] * Math.sin(lch[2])];
+    }
+
+    function lchToRgbSafe(l, c, h) {
+      let chroma = c;
+      for (let i = 0; i < 24; i++) {
+        const rgb = oklabToRgb(lchToLab([l, chroma, h]));
+        if (rgb.every((v) => v >= 0 && v <= 255)) return rgb.map((v) => Math.round(v));
+        chroma *= 0.91;
+      }
+      return oklabToRgb(lchToLab([l, 0, h])).map((v) => Math.round(clamp(v, 0, 255)));
+    }
+
+    function distance(a, b) {
+      return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    }
+
+    function rgbToHex(rgb) {
+      return "#" + rgb.map((v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("").toUpperCase();
+    }
+
+    function setStatus(text, state = "") {
+      statusEl.className = "status" + (state ? ` ${state}` : "");
+      statusEl.querySelector("span").textContent = text;
+    }
+
+    function kMeans(points, k = 8, iterations = 13) {
+      if (!points.length) return [];
+      const sorted = [...points].sort((a, b) => b.lch[1] - a.lch[1]);
+      let centroids = [sorted[Math.floor(sorted.length * 0.08)].lab.slice()];
+      while (centroids.length < Math.min(k, points.length)) {
+        let bestPoint = points[0], bestDistance = -1;
+        const stride = Math.max(1, Math.floor(points.length / 1800));
+        for (let i = 0; i < points.length; i += stride) {
+          const point = points[i];
+          const nearest = Math.min(...centroids.map((c) => distance(point.lab, c)));
+          const weighted = nearest * (0.35 + Math.min(point.lch[1] / 0.18, 1));
+          if (weighted > bestDistance) { bestDistance = weighted; bestPoint = point; }
+        }
+        centroids.push(bestPoint.lab.slice());
+      }
+
+      let assignments = new Uint8Array(points.length);
+      for (let iteration = 0; iteration < iterations; iteration++) {
+        const sums = centroids.map(() => [0, 0, 0, 0]);
+        points.forEach((point, index) => {
+          let nearest = 0, minDistance = Infinity;
+          centroids.forEach((centroid, ci) => {
+            const d = distance(point.lab, centroid);
+            if (d < minDistance) { minDistance = d; nearest = ci; }
+          });
+          assignments[index] = nearest;
+          sums[nearest][0] += point.lab[0];
+          sums[nearest][1] += point.lab[1];
+          sums[nearest][2] += point.lab[2];
+          sums[nearest][3] += 1;
+        });
+        centroids = centroids.map((centroid, i) => sums[i][3] ? [sums[i][0] / sums[i][3], sums[i][1] / sums[i][3], sums[i][2] / sums[i][3]] : centroid);
+      }
+
+      const counts = new Array(centroids.length).fill(0);
+      assignments.forEach((index) => counts[index]++);
+      return centroids.map((lab, i) => ({
+        lab,
+        lch: labToLch(lab),
+        rgb: oklabToRgb(lab).map((v) => Math.round(clamp(v, 0, 255))),
+        ratio: counts[i] / points.length
+      })).filter((cluster) => cluster.ratio > 0.002).sort((a, b) => b.ratio - a.ratio);
+    }
+
+    function chooseOklchColors(clusters) {
+      const pool = clusters.filter((cluster) => {
+        const [l, c] = cluster.lch;
+        return cluster.ratio >= 0.002 && l >= 0.12 && l <= 0.94 && c >= 0.008;
+      });
+      const candidates = pool.length >= 2 ? pool : clusters;
+
+      const primaryScore = (cluster) => {
+        const [l, c] = cluster.lch;
+        const areaScore = Math.pow(cluster.ratio, 0.58);
+        const chromaScore = 0.35 + Math.min(c / 0.16, 1.25);
+        const lightnessScore = 0.35 + Math.exp(-Math.pow((l - 0.62) / 0.27, 2));
+        return areaScore * chromaScore * lightnessScore;
+      };
+
+      const primary = [...candidates].sort((a, b) => primaryScore(b) - primaryScore(a))[0];
+      const secondaryCandidates = candidates.filter((cluster) => cluster !== primary).map((cluster) => {
+        const [l, c] = cluster.lch;
+        const deltaE = distance(cluster.lab, primary.lab);
+        const areaScore = Math.pow(cluster.ratio, 0.46);
+        const chromaScore = 0.3 + Math.min(c / 0.14, 1.2);
+        const distanceScore = 0.35 + Math.min(deltaE / 0.26, 1.45);
+        const lightnessScore = 0.5 + Math.exp(-Math.pow((l - 0.66) / 0.32, 2)) * 0.5;
+        return { cluster, deltaE, score: areaScore * chromaScore * distanceScore * lightnessScore };
+      }).filter((item) => item.deltaE >= 0.045).sort((a, b) => b.score - a.score);
+
+      let secondary = secondaryCandidates[0]?.cluster;
+      let synthetic = false;
+      if (!secondary) {
+        synthetic = true;
+        const [l, c, h] = primary.lch;
+        const fallbackLch = [clamp(l + 0.08, 0.36, 0.9), Math.max(c * 0.55, 0.018), h];
+        const lab = lchToLab(fallbackLch);
+        secondary = { lab, lch: fallbackLch, rgb: lchToRgbSafe(...fallbackLch), ratio: 0 };
+      }
+      return { primary, secondary, synthetic };
+    }
+
+    function makeThemeV3(selection) {
+      const { primary, secondary } = selection;
+      const [primaryL, primaryC, primaryH] = primary.lch;
+      const [secondaryL, secondaryC, secondaryH] = secondary.lch;
+
+      const accentL = clamp(0.58 + (primaryL - 0.58) * 0.22, 0.54, 0.66);
+      const accentC = clamp(primaryC * 1.28 + 0.025, 0.09, 0.21);
+      const accent = lchToRgbSafe(accentL, accentC, primaryH);
+
+      const bgPrimaryL = clamp(0.87 + (primaryL - 0.5) * 0.035, 0.86, 0.9);
+      const bgPrimaryC = clamp(primaryC * 0.48, 0.022, 0.085);
+      const bgPrimary = lchToRgbSafe(bgPrimaryL, bgPrimaryC, primaryH);
+
+      const bgSecondaryL = clamp(0.9 + (secondaryL - 0.5) * 0.025, 0.89, 0.93);
+      const bgSecondaryC = clamp(secondaryC * 0.44, 0.018, 0.075);
+      const bgSecondary = lchToRgbSafe(bgSecondaryL, bgSecondaryC, secondaryH);
+
+      const primaryBackgroundLab = rgbToOklab(bgPrimary);
+      const secondaryBackgroundLab = rgbToOklab(bgSecondary);
+      const bridgeLab = primaryBackgroundLab.map((value, index) =>
+        value * 0.56 + secondaryBackgroundLab[index] * 0.44
+      );
+      const bridgeLch = labToLch(bridgeLab);
+      const bgBridge = lchToRgbSafe(
+        clamp(bridgeLch[0] + 0.012, 0.86, 0.93),
+        bridgeLch[1] * 0.8,
+        bridgeLch[2]
+      );
+
+      return { accent, bgPrimary, bgSecondary, bgBridge };
+    }
+
+    function renderTheme(theme, clusters, synthetic) {
+      const accentHex = rgbToHex(theme.accent);
+      const primaryHex = rgbToHex(theme.bgPrimary);
+      const secondaryHex = rgbToHex(theme.bgSecondary);
+      root.style.setProperty("--accent", accentHex);
+      root.style.setProperty("--bg-a", primaryHex);
+      root.style.setProperty("--bg-b", secondaryHex);
+      root.style.setProperty("--bg-bridge", rgbToHex(theme.bgBridge));
+      const items = [
+        ["accentSwatch", "accentValue", accentHex],
+        ["primarySwatch", "primaryValue", primaryHex],
+        ["secondarySwatch", "secondaryValue", secondaryHex]
+      ];
+      items.forEach(([swatchId, valueId, hex]) => {
+        document.getElementById(swatchId).style.background = hex;
+        document.getElementById(valueId).textContent = hex;
+      });
+      paletteEl.innerHTML = "";
+      clusters.slice(0, 8).forEach((cluster) => {
+        const hex = rgbToHex(cluster.rgb);
+        const chip = document.createElement("div");
+        chip.className = "palette-chip";
+        chip.style.background = hex;
+        chip.style.flexGrow = String(Math.max(0.5, cluster.ratio * 10));
+        chip.dataset.label = `${hex} · ${(cluster.ratio * 100).toFixed(1)}%`;
+        paletteEl.appendChild(chip);
+      });
+      setStatus(synthetic ? "V3 取色完成 · 第二色使用同色相兜底" : "V3 取色完成 · OKLCH 通用规则", "ready");
+    }
+
+    function analyzeImage(image) {
+      const size = 128;
+      canvas.width = size;
+      canvas.height = size;
+      const scale = Math.max(size / image.naturalWidth, size / image.naturalHeight);
+      const drawWidth = image.naturalWidth * scale;
+      const drawHeight = image.naturalHeight * scale;
+      ctx.clearRect(0, 0, size, size);
+      ctx.drawImage(image, (size - drawWidth) / 2, (size - drawHeight) / 2, drawWidth, drawHeight);
+      const data = ctx.getImageData(0, 0, size, size).data;
+      const allPoints = [];
+      const filteredPoints = [];
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] < 160) continue;
+        const rgb = [data[i], data[i + 1], data[i + 2]];
+        const lab = rgbToOklab(rgb);
+        const lch = labToLch(lab);
+        const point = { rgb, lab, lch };
+        allPoints.push(point);
+        if (lch[0] > 0.055 && lch[0] < 0.975) filteredPoints.push(point);
+      }
+      const points = filteredPoints.length > allPoints.length * 0.28 ? filteredPoints : allPoints;
+      const clusters = kMeans(points, 16, 16);
+      if (!clusters.length) throw new Error("图片中没有可用颜色");
+      const selected = chooseOklchColors(clusters);
+      renderTheme(makeThemeV3(selected), clusters, selected.synthetic);
+    }
+
+    function loadFile(file) {
+      if (!file || !file.type.startsWith("image/")) {
+        setStatus("请选择有效的图片文件", "error");
+        return;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        setStatus("图片不能超过 20MB", "error");
+        return;
+      }
+      setStatus("正在分析封面颜色…", "working");
+      const url = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        coverImage.src = url;
+        coverImage.style.display = "block";
+        coverPlaceholder.style.display = "none";
+        try {
+          requestAnimationFrame(() => analyzeImage(image));
+        } catch (error) {
+          console.error(error);
+          setStatus("取色失败，请更换图片重试", "error");
+        }
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        setStatus("图片读取失败", "error");
+      };
+      image.src = url;
+    }
+
+    fileInput.addEventListener("change", (event) => loadFile(event.target.files[0]));
+    ["dragenter", "dragover"].forEach((type) => dropzone.addEventListener(type, (event) => {
+      event.preventDefault();
+      dropzone.classList.add("dragover");
+    }));
+    ["dragleave", "drop"].forEach((type) => dropzone.addEventListener(type, (event) => {
+      event.preventDefault();
+      dropzone.classList.remove("dragover");
+    }));
+    dropzone.addEventListener("drop", (event) => loadFile(event.dataTransfer.files[0]));
+
+    $("#blurRange").addEventListener("input", (event) => {
+      root.style.setProperty("--blur", `${event.target.value}px`);
+      $("#blurValue").textContent = event.target.value;
+    });
+    $("#strengthRange").addEventListener("input", (event) => {
+      root.style.setProperty("--strength", event.target.value / 100);
+      $("#strengthValue").textContent = `${event.target.value}%`;
+    });
+
+    document.querySelectorAll(".copy-btn").forEach((button) => button.addEventListener("click", async () => {
+      const value = document.getElementById(button.dataset.copy).textContent;
+      try { await navigator.clipboard.writeText(value); }
+      catch { const input = document.createElement("textarea"); input.value = value; document.body.appendChild(input); input.select(); document.execCommand("copy"); input.remove(); }
+      toast.textContent = `已复制 ${value}`;
+      toast.classList.add("show");
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.remove("show"), 1500);
+    }));
+
+    const initialPalette = ["#4697AA", "#A2C5CD", "#285965", "#D8F1F6", "#3B8B9B"];
+    initialPalette.forEach((hex, index) => {
+      const chip = document.createElement("div");
+      chip.className = "palette-chip";
+      chip.style.background = hex;
+      chip.dataset.label = index === 0 ? "示例候选主色" : "上传后显示真实候选色";
+      paletteEl.appendChild(chip);
+    });
+  </script>
+</body>
+</html>

@@ -5,6 +5,8 @@
 ## Experiments
 
 - [春池 · Spring Pond](./spring-pond/) — 上传图片，在可交互的水面中观察雨滴、波纹与折射。
+- [新点彩 · Neo Pointillism](./neo-pointillism/) — 由点构成的色彩生成器。
+- [取色实验室 · Color Lab V3](./qq-music-color-lab/) — 专辑封面动态取色实验室，从封面提取主色调。
 
 ## Local preview
 

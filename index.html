@@ -53,15 +53,9 @@
 
     header span:last-child { color: var(--muted); }
 
-    main {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(320px, .78fr);
-      align-items: center;
-      gap: clamp(36px, 8vw, 120px);
-      padding: 72px 0;
-    }
+    main { padding: 72px 0; }
 
-    .intro { align-self: end; }
+    .intro { max-width: 640px; margin-bottom: 64px; }
 
     .eyebrow {
       margin: 0 0 24px;
@@ -74,7 +68,7 @@
     h1 {
       margin: 0;
       font-family: Georgia, "Times New Roman", serif;
-      font-size: clamp(72px, 12vw, 172px);
+      font-size: clamp(64px, 12vw, 148px);
       font-weight: 400;
       letter-spacing: -.075em;
       line-height: .72;
@@ -88,88 +82,110 @@
     }
 
     .intro p:last-child {
-      width: min(420px, 100%);
-      margin: 54px 0 0;
+      width: min(520px, 100%);
+      margin: 40px 0 0;
       font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
       font-size: 15px;
       line-height: 1.85;
     }
 
-    .portal {
-      position: relative;
-      aspect-ratio: 4 / 5;
+    .gallery {
       display: grid;
-      place-items: center;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(20px, 3vw, 40px);
+      align-items: end;
     }
 
-    .rings {
-      position: absolute;
-      inset: 4%;
-      border: 1px solid var(--line);
-      border-radius: 51% 49% 47% 53% / 45% 56% 44% 55%;
-      animation: drift 12s ease-in-out infinite alternate;
-    }
-
-    .rings::before,
-    .rings::after {
-      content: "";
-      position: absolute;
-      border: 1px solid var(--line);
-      border-radius: inherit;
-    }
-
-    .rings::before { inset: 10%; transform: rotate(9deg); }
-    .rings::after { inset: 22%; transform: rotate(-13deg); }
-
-    .work {
+    .card {
       position: relative;
-      z-index: 1;
-      width: 58%;
-      aspect-ratio: 3 / 4;
       display: flex;
       flex-direction: column;
-      justify-content: flex-end;
-      padding: 24px;
-      overflow: hidden;
-      border-radius: 48% 48% 10px 10px;
-      background:
-        radial-gradient(circle at 34% 38%, rgba(255,255,255,.32) 0 2px, transparent 3px),
-        radial-gradient(circle at 68% 52%, rgba(255,255,255,.22) 0 1px, transparent 2px),
-        linear-gradient(155deg, #b9d7ca, #3e7c73 58%, #183d3a);
-      color: #f1f5ef;
       text-decoration: none;
-      box-shadow: 0 30px 80px rgba(42, 57, 58, .22);
-      transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s;
+      color: inherit;
     }
 
-    .work::before {
+    .frame {
+      position: relative;
+      aspect-ratio: 3 / 4;
+      overflow: hidden;
+      border-radius: 30px 30px 12px 12px;
+      box-shadow: 0 26px 64px rgba(42, 57, 58, .20);
+      transition: transform .5s cubic-bezier(.2,.8,.2,1), box-shadow .5s;
+    }
+
+    .frame::after {
       content: "";
       position: absolute;
       inset: 0;
-      background: repeating-radial-gradient(ellipse at 50% 45%, transparent 0 21px, rgba(255,255,255,.08) 22px 23px);
-      transform: scale(1.35);
-      transition: transform .8s ease;
+      background:
+        repeating-radial-gradient(ellipse at 50% 42%, transparent 0 18px, rgba(255,255,255,.07) 19px 20px);
+      mix-blend-mode: overlay;
+      transition: opacity .5s;
     }
 
-    .work:hover,
-    .work:focus-visible {
-      transform: translateY(-10px) rotate(-1deg);
-      box-shadow: 0 40px 100px rgba(42, 57, 58, .32);
+    .card:hover .frame,
+    .card:focus-visible .frame {
+      transform: translateY(-12px);
+      box-shadow: 0 44px 96px rgba(42, 57, 58, .34);
       outline: none;
     }
 
-    .work:hover::before,
-    .work:focus-visible::before { transform: scale(1); }
+    .frame .glyph {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(72px, 9vw, 120px);
+      color: rgba(255,255,255,.14);
+      line-height: 1;
+      user-select: none;
+    }
 
-    .work small,
-    .work strong { position: relative; }
-    .work small { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
-    .work strong {
+    .meta {
+      margin-top: 18px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .meta small {
+      font-size: 10px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .meta strong {
       margin-top: 8px;
       font-family: "Songti SC", "STSong", Georgia, serif;
-      font-size: clamp(38px, 5vw, 64px);
+      font-size: clamp(26px, 3.4vw, 40px);
       font-weight: 400;
-      letter-spacing: .08em;
+      letter-spacing: .06em;
+    }
+
+    .meta span {
+      margin-top: 8px;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    /* per-card gradients */
+    .g-spring {
+      background:
+        radial-gradient(circle at 34% 34%, rgba(255,255,255,.34) 0 2px, transparent 3px),
+        linear-gradient(155deg, #b9d7ca, #3e7c73 58%, #183d3a);
+    }
+    .g-neo {
+      background:
+        radial-gradient(circle at 62% 30%, rgba(255,255,255,.30) 0 2px, transparent 3px),
+        linear-gradient(150deg, #d8c7ee, #9e85b8 52%, #4a2f6b);
+    }
+    .g-color {
+      background:
+        radial-gradient(circle at 30% 28%, rgba(255,255,255,.32) 0 2px, transparent 3px),
+        linear-gradient(145deg, #f0b98a, #e07a5f 48%, #8a3a4a);
     }
 
     footer {
@@ -178,20 +194,17 @@
       color: var(--muted);
     }
 
-    @keyframes drift {
-      to { transform: rotate(5deg) scale(.97); }
+    @media (max-width: 860px) {
+      .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
-    @media (max-width: 760px) {
+    @media (max-width: 560px) {
       .shell { width: min(100% - 28px, 560px); }
       header { min-height: 62px; }
       header span:last-child { display: none; }
-      main { grid-template-columns: 1fr; padding: 54px 0 64px; }
-      .intro { align-self: auto; }
-      h1 { font-size: clamp(72px, 24vw, 120px); }
-      .intro p:last-child { margin-top: 40px; }
-      .portal { min-height: 500px; }
-      .work { width: min(70%, 300px); }
+      main { padding: 48px 0 56px; }
+      .gallery { grid-template-columns: 1fr; }
+      .frame { aspect-ratio: 4 / 3; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -210,21 +223,48 @@
       <section class="intro">
         <p class="eyebrow">An evolving collection</p>
         <h1>Rabbit <em>Hole</em></h1>
-        <p>由代码生成的界面、交互、动态系统，以及那些值得保留下来的美丽意外。沿着入口继续向下。</p>
+        <p>由代码生成的界面、交互、动态系统，以及那些值得保留下来的美丽意外。选择一个入口，继续向下。</p>
       </section>
 
-      <section class="portal" aria-label="视觉实验">
-        <div class="rings" aria-hidden="true"></div>
-        <a class="work" href="./spring-pond/">
-          <small>First descent · Interactive canvas</small>
-          <strong>春池</strong>
+      <section class="gallery" aria-label="视觉实验">
+        <a class="card" href="./spring-pond/">
+          <div class="frame g-spring">
+            <span class="glyph">池</span>
+          </div>
+          <div class="meta">
+            <small>001 · Interactive canvas</small>
+            <strong>春池</strong>
+            <span>上传图片，在可交互的水面中观察雨滴、波纹与折射。</span>
+          </div>
+        </a>
+
+        <a class="card" href="./neo-pointillism/">
+          <div class="frame g-neo">
+            <span class="glyph">彩</span>
+          </div>
+          <div class="meta">
+            <small>002 · Generative art</small>
+            <strong>新点彩</strong>
+            <span>Neo Pointillism — 由点构成的色彩生成器。</span>
+          </div>
+        </a>
+
+        <a class="card" href="./qq-music-color-lab/">
+          <div class="frame g-color">
+            <span class="glyph">色</span>
+          </div>
+          <div class="meta">
+            <small>003 · Color system</small>
+            <strong>取色实验室</strong>
+            <span>专辑封面动态取色实验室 V3，从封面提取主色调。</span>
+          </div>
         </a>
       </section>
     </main>
 
     <footer>
       <span>Rabbit Hole</span>
-      <span>001 experiment</span>
+      <span>003 experiments</span>
     </footer>
   </div>
 </body>
